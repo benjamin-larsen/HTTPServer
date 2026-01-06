@@ -51,6 +51,8 @@ namespace TCP {
                 try {
                     tcp::socket socket(context);
                     acceptor.accept(socket);
+
+                    boost::asio::co_spawn(context, SpawnSocket(std::move(socket)), boost::asio::detached);
                     std::cout << "Socket Connected 2" << std::endl;
                 } catch (...) {
                     std::cout << "Socket Error" << std::endl;
