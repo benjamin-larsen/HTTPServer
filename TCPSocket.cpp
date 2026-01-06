@@ -9,7 +9,7 @@
 namespace TCP {
     using namespace boost::asio::ip;
 
-    struct RequestInfo {
+    struct RequestLine {
         std::string method;
         std::string path;
         std::string version;
@@ -20,8 +20,8 @@ namespace TCP {
         std::string value;
     };
 
-    RequestInfo DecodeRequestInfo(const std::string& line) {
-        RequestInfo info;
+    RequestLine DecodeRequestLine(const std::string& line) {
+        RequestLine info;
         std::stringstream ss(line);
 
         std::getline(ss, info.method, ' ');
@@ -90,12 +90,12 @@ namespace TCP {
 
 
         boost::asio::awaitable<bool> ReadRequestHeaders() {
-            auto reqInfo = DecodeRequestInfo(co_await ReadLine());
+            auto [method, path, version] = DecodeRequestLine(co_await ReadLine());
 
-            printf("Method: %s\nPath: %s\nVersion: %s\n", reqInfo.method.c_str(), reqInfo.path.c_str(), reqInfo.version.c_str());
+            printf("Method: %s\nPath: %s\nVersion: %s\n", method.c_str(), path.c_str(), version.c_str());
 
-            if (reqInfo.path.empty() || reqInfo.path.front() != '/') co_return true;
-            if (reqInfo.version != "HTTP/1.0" && reqInfo.version != "HTTP/1.1") co_return true;
+            if (path.empty() || path.front() != '/') co_return true;
+            if (version != "HTTP/1.0" && version != "HTTP/1.1") co_return true;
 
             for (;;) {
                 auto line = co_await ReadLine();
