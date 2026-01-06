@@ -4,6 +4,7 @@
 #include <memory>
 #include <iostream>
 #include <boost/asio.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace TCP {
     using namespace boost::asio::ip;
@@ -12,6 +13,11 @@ namespace TCP {
         std::string method;
         std::string path;
         std::string version;
+    };
+
+    struct RequestHeader {
+        std::string key;
+        std::string value;
     };
 
     RequestInfo DecodeRequestInfo(const std::string& line) {
@@ -23,6 +29,34 @@ namespace TCP {
         std::getline(ss, info.version, ' ');
 
         return info;
+    }
+
+    RequestHeader NullHeader{};
+
+    RequestHeader DecodeRequestHeader(const std::string& line) {
+        RequestHeader header{};
+        auto delimPos = line.find(':');
+
+        if (delimPos == std::string::npos) return NullHeader;
+
+        header.key = line.substr(0, delimPos);
+        boost::algorithm::to_lower(header.key);
+
+        auto vv = std::string_view(line).substr(delimPos + 1);
+
+        auto leadingTrim = vv.find_first_not_of(" \t");
+        auto trailingTrim = vv.find_last_not_of(" \t");
+
+        if (leadingTrim == std::string::npos || trailingTrim == std::string::npos)
+            return NullHeader;
+
+        // This shouldn't happen, but just incase.
+        if (trailingTrim < leadingTrim) return NullHeader;
+
+        vv = vv.substr(leadingTrim, trailingTrim - leadingTrim + 1);
+        header.value = std::string(vv);
+
+        return header;
     }
 
     void TrimSuffixChar(std::string& str, const char c) {
@@ -64,13 +98,15 @@ namespace TCP {
             if (reqInfo.version != "HTTP/1.0" && reqInfo.version != "HTTP/1.1") co_return true;
 
             for (;;) {
-                auto header = co_await ReadLine();
+                auto line = co_await ReadLine();
 
-                if (header.empty()) {
-                    break;
-                }
+                if (line.empty()) break;
 
-                printf("Header: %s\n", header.c_str());
+                auto [key, value] = DecodeRequestHeader(line);
+
+                if (key.empty() || value.empty()) co_return true;
+
+                printf("Key: %s\nValue: %s\n", key.c_str(), value.c_str());
             }
 
             printf("Request Done\n");

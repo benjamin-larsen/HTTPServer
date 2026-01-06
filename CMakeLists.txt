@@ -7,7 +7,7 @@ add_subdirectory(includes/boost)
 
 add_executable(HTTPServer main.cpp)
 
-target_link_libraries(HTTPServer PRIVATE Boost::asio)
+target_link_libraries(HTTPServer PRIVATE Boost::asio Boost::algorithm)
 
 if(WIN32)
     target_link_libraries(HTTPServer PRIVATE ws2_32)
